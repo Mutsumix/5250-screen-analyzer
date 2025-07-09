@@ -13,14 +13,12 @@ const AssistantPanel = ({ response, onTextOnlyQuestion, onWithScreenQuestion }: 
   const handleTextOnlySubmit = () => {
     if (question.trim()) {
       onTextOnlyQuestion(question.trim());
-      setQuestion('');
     }
   };
 
   const handleWithScreenSubmit = () => {
     if (question.trim()) {
       onWithScreenQuestion(question.trim());
-      setQuestion('');
     }
   };
 

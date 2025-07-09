@@ -5,7 +5,7 @@ import { AppSettings } from '../shared/types';
 
 const __dirname = path.dirname(__filename);
 
-const isDev = process.argv.includes('--dev');
+const isDev = process.env.NODE_ENV === 'development' || process.argv.includes('--dev');
 
 const store = new Store<{ settings: AppSettings }>({
   defaults: {
@@ -20,33 +20,47 @@ let mainWindow: BrowserWindow | null = null;
 let captureInterval: NodeJS.Timeout | null = null;
 
 function createWindow() {
+  console.log('Creating window...');
+  
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
+      nodeIntegration: true,
+      contextIsolation: false,
     },
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    show: false, // Don't show until ready
   });
 
-  if (isDev) {
-    mainWindow.loadURL('http://localhost:5173');
-    mainWindow.webContents.openDevTools();
-  } else {
-    mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
-  }
+  console.log('Window created, loading content...');
+
+  // Load test file for now
+  console.log('Loading test file...');
+  mainWindow.loadFile(path.join(__dirname, '../test.html'));
+  mainWindow.webContents.openDevTools();
+
+  mainWindow.once('ready-to-show', () => {
+    console.log('Window ready to show');
+    mainWindow?.show();
+  });
+
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    console.error('Failed to load:', errorCode, errorDescription);
+  });
 
   mainWindow.on('closed', () => {
+    console.log('Window closed');
     mainWindow = null;
   });
 }
 
 app.whenReady().then(() => {
+  console.log('App ready, creating window...');
   createWindow();
 
   app.on('activate', () => {
+    console.log('App activated');
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
     }
@@ -54,10 +68,22 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
+  console.log('All windows closed');
   if (process.platform !== 'darwin') {
     app.quit();
   }
 });
+
+// Error handling
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+console.log('Starting Electron app...');
 
 // IPC Handlers
 ipcMain.handle('settings:get', () => {

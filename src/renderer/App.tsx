@@ -6,21 +6,24 @@ import TerminalPreview from './components/TerminalPreview';
 import AssistantPanel from './components/AssistantPanel';
 import ControlBar from './components/ControlBar';
 
+// Mock electronAPI for development
+const mockElectronAPI = {
+  getSettings: () => Promise.resolve({ captureInterval: 2000, ocrLanguage: 'eng+jpn' }),
+  updateSettings: (settings: any) => console.log('Update settings:', settings),
+  startCapture: () => console.log('Start capture'),
+  stopCapture: () => console.log('Stop capture'),
+  manualCapture: () => console.log('Manual capture'),
+  onCaptureResult: (callback: (capture: ScreenCapture) => void) => {},
+  onOcrResult: (callback: (result: { captureId: string; text: string }) => void) => {},
+  onAiResponse: (callback: (response: AIResponse) => void) => {},
+  onStatusUpdate: (callback: (status: AppStatus) => void) => {},
+  onError: (callback: (error: { message: string; details?: any }) => void) => {},
+  removeAllListeners: () => {},
+};
+
 declare global {
   interface Window {
-    electronAPI: {
-      getSettings: () => Promise<any>;
-      updateSettings: (settings: any) => void;
-      startCapture: () => void;
-      stopCapture: () => void;
-      manualCapture: () => void;
-      onCaptureResult: (callback: (capture: ScreenCapture) => void) => void;
-      onOcrResult: (callback: (result: { captureId: string; text: string }) => void) => void;
-      onAiResponse: (callback: (response: AIResponse) => void) => void;
-      onStatusUpdate: (callback: (status: AppStatus) => void) => void;
-      onError: (callback: (error: { message: string; details?: any }) => void) => void;
-      removeAllListeners: () => void;
-    };
+    electronAPI?: typeof mockElectronAPI;
   }
 }
 
@@ -38,49 +41,55 @@ function App() {
   const [isCapturing, setIsCapturing] = useState(false);
 
   useEffect(() => {
+    // Use mock API if electronAPI is not available
+    const api = window.electronAPI || mockElectronAPI;
+    
     // Set up event listeners
-    window.electronAPI.onCaptureResult((capture) => {
+    api.onCaptureResult((capture) => {
       addCapture(capture);
     });
 
-    window.electronAPI.onOcrResult((result) => {
+    api.onOcrResult((result) => {
       updateCaptureOcr(result.captureId, result.text);
     });
 
-    window.electronAPI.onAiResponse((response) => {
+    api.onAiResponse((response) => {
       addAiResponse(response);
     });
 
-    window.electronAPI.onStatusUpdate((newStatus) => {
+    api.onStatusUpdate((newStatus) => {
       setStatus(newStatus);
       setIsCapturing(newStatus === 'capturing');
     });
 
-    window.electronAPI.onError((error) => {
+    api.onError((error) => {
       console.error('Error:', error);
       // TODO: Show error notification
     });
 
     // Load initial settings
-    window.electronAPI.getSettings().then((settings) => {
+    api.getSettings().then((settings) => {
       console.log('Settings loaded:', settings);
     });
 
     return () => {
-      window.electronAPI.removeAllListeners();
+      api.removeAllListeners();
     };
   }, []);
 
   const handleStartCapture = () => {
-    window.electronAPI.startCapture();
+    const api = window.electronAPI || mockElectronAPI;
+    api.startCapture();
   };
 
   const handleStopCapture = () => {
-    window.electronAPI.stopCapture();
+    const api = window.electronAPI || mockElectronAPI;
+    api.stopCapture();
   };
 
   const handleManualCapture = () => {
-    window.electronAPI.manualCapture();
+    const api = window.electronAPI || mockElectronAPI;
+    api.manualCapture();
   };
 
   return (

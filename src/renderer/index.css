@@ -2,13 +2,42 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 
-/* Custom styles for Electron app */
+/* Force transparency for Windows */
+html, body, #root {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
 body {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Custom styles for Electron app */
+html, body {
   margin: 0;
   padding: 0;
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Ensure root element is transparent */
+#root {
+  background: transparent !important;
+  background-color: transparent !important;
+  min-height: 100vh;
+}
+
+/* Override Tailwind's default background colors */
+.bg-white {
+  background-color: transparent !important;
 }
 
 /* Draggable area for macOS */
@@ -52,4 +81,17 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #6a6a6a;
+}
+
+/* Override any potential white backgrounds */
+div, section, main, article {
+  background-color: transparent !important;
+}
+
+/* Except for elements that need backgrounds */
+.bg-gradient-to-br,
+.bg-gray-800,
+.bg-black,
+[class*="bg-"] {
+  background-color: revert !important;
 }

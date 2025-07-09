@@ -12,8 +12,8 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
     captureArea: {
       x: 100,
       y: 100,
-      width: 800,
-      height: 600,
+      width: 1200,
+      height: 900,
     },
   });
 
@@ -33,8 +33,8 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
             captureArea: loadedSettings.captureArea || {
               x: 100,
               y: 100,
-              width: 800,
-              height: 600,
+              width: 1200,
+              height: 900,
             }
           };
           setSettings(settingsWithArea);

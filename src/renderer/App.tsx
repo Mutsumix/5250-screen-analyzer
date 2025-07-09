@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AppStatus, ScreenCapture, AIResponse, AppSettings } from '../shared/types';
 import { useStore } from './stores/useStore';
 import Header from './components/Header';
@@ -6,7 +6,9 @@ import AssistantPanel from './components/AssistantPanel';
 import ControlBar from './components/ControlBar';
 import SettingsModal from './components/SettingsModal';
 import CaptureGuide from './components/CaptureGuide';
+import TerminalPreview from './components/TerminalPreview';
 import './styles/scrollbar.css';
+import './index.css';
 
 // Mock electronAPI for development
 const mockElectronAPI = {
@@ -15,8 +17,8 @@ const mockElectronAPI = {
     captureArea: {
       x: 100,
       y: 100,
-      width: 800,
-      height: 600,
+      width: 1200,
+      height: 900,
     }
   }),
   updateSettings: (settings: any) => console.log('Update settings:', settings),
@@ -45,7 +47,7 @@ const mockElectronAPI = {
     return () => console.log('Mock: onError listener removed');
   },
   removeAllListeners: () => console.log('Mock: removeAllListeners called'),
-  getWindowBounds: () => Promise.resolve({ x: 100, y: 100, width: 1200, height: 800 }),
+  getWindowBounds: () => Promise.resolve({ x: 100, y: 100, width: 2000, height: 1200 }),
   updateCaptureArea: (captureArea: any) => console.log('Mock: updateCaptureArea called with:', captureArea),
   onWindowMoved: (callback: () => void) => {
     console.log('Mock: onWindowMoved listener added');
@@ -55,6 +57,7 @@ const mockElectronAPI = {
     console.log('Mock: onWindowResized listener added');
     return () => console.log('Mock: onWindowResized listener removed');
   },
+  getPlatform: () => Promise.resolve('win32'),
 };
 
 declare global {
@@ -63,7 +66,7 @@ declare global {
   }
 }
 
-function App() {
+const App = () => {
   const { 
     status, 
     setStatus, 
@@ -71,7 +74,7 @@ function App() {
     updateCaptureOcr,
     addAiResponse,
     currentCapture,
-    currentResponse
+    currentResponse,
   } = useStore();
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -82,11 +85,10 @@ function App() {
     captureArea: {
       x: 100,
       y: 100,
-      width: 800,
-      height: 600,
+      width: 1200,
+      height: 900,
     },
   });
-
   useEffect(() => {
     // Use mock API if electronAPI is not available
     const api = window.electronAPI || mockElectronAPI;
@@ -189,12 +191,12 @@ function App() {
   };
 
   return (
-    <div className="h-screen flex flex-col text-white">
+    <div className="h-screen flex flex-col text-white" style={{ backgroundColor: 'transparent' }}>
       <Header isProcessing={isProcessing} />
       
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel - Transparent with only borders/text having background */}
-        <div className="w-1/2 relative">
+        <div className="w-3/5 relative" style={{ backgroundColor: 'transparent' }}>
           <div className="h-full">
             <div className="relative h-full p-4 pb-8">
               <CaptureGuide settings={settings} />
@@ -203,10 +205,10 @@ function App() {
         </div>
         
         {/* Right Panel - AI Assistant */}
-        <div className="w-1/2 relative p-2">
-          <div className="h-full bg-gradient-to-br from-gray-800 via-gray-700 to-gray-600 rounded-lg border-2 border-gray-500 shadow-2xl">
-            <div className="absolute inset-0 rounded-lg border border-gray-400 shadow-inner"></div>
-            <div className="relative h-full p-4 rounded-lg">
+        <div className="w-2/5 relative p-2" style={{ opacity: 1 }}>
+          <div className="h-full bg-gradient-to-br from-gray-800 via-gray-700 to-gray-600 rounded-lg border-2 border-gray-500 shadow-2xl" style={{ opacity: 1, backgroundColor: 'rgba(55, 65, 81, 1)' }}>
+            <div className="absolute inset-0 rounded-lg border border-gray-400 shadow-inner" style={{ opacity: 1 }}></div>
+            <div className="relative h-full p-4 rounded-lg" style={{ opacity: 1 }}>
               <AssistantPanel 
                 response={currentResponse} 
                 onTextOnlyQuestion={handleTextOnlyQuestion}
@@ -217,7 +219,7 @@ function App() {
         </div>
       </div>
       
-      <ControlBar
+      <ControlBar 
         onManualCapture={handleManualCapture}
         onOpenSettings={handleOpenSettings}
       />
@@ -228,6 +230,6 @@ function App() {
       />
     </div>
   );
-}
+};
 
 export default App;

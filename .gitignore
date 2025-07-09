@@ -50,3 +50,6 @@ thumbs.db
 
 # Development captures
 captures/
+
+# Claude Code settings
+.claude/

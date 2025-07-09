@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { AppStatus, ScreenCapture, AIResponse, AppSettings } from '../shared/types';
 import { useStore } from './stores/useStore';
 import Header from './components/Header';
-import TerminalPreview from './components/TerminalPreview';
 import AssistantPanel from './components/AssistantPanel';
 import ControlBar from './components/ControlBar';
 import SettingsModal from './components/SettingsModal';
 import CaptureGuide from './components/CaptureGuide';
+import './styles/scrollbar.css';
 
 // Mock electronAPI for development
 const mockElectronAPI = {
@@ -21,6 +21,9 @@ const mockElectronAPI = {
   }),
   updateSettings: (settings: any) => console.log('Update settings:', settings),
   manualCapture: () => console.log('Manual capture'),
+  sendTextOnlyQuestion: (question: string) => console.log('Mock: Text-only question:', question),
+  sendWithScreenQuestion: (question: string, captureId: string, imageData: string) => 
+    console.log('Mock: With-screen question:', question, captureId),
   onCaptureResult: (callback: (capture: ScreenCapture) => void) => {
     console.log('Mock: onCaptureResult listener added');
     return () => console.log('Mock: onCaptureResult listener removed');
@@ -72,6 +75,8 @@ function App() {
   } = useStore();
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [currentQuestion, setCurrentQuestion] = useState<string>('');
+  const [isProcessing, setIsProcessing] = useState(false);
   const [settings, setSettings] = useState<AppSettings>({
     ocrLanguage: 'eng+jpn',
     captureArea: {
@@ -92,6 +97,12 @@ function App() {
     if (api.onCaptureResult) {
       const cleanup = api.onCaptureResult((capture) => {
         addCapture(capture);
+        
+        // If we have a pending question, send it with the captured screen
+        if (currentQuestion && api.sendWithScreenQuestion) {
+          api.sendWithScreenQuestion(currentQuestion, capture.id, capture.imageData);
+          setCurrentQuestion(''); // Clear the question after sending
+        }
       });
       if (cleanup) cleanupFunctions.push(cleanup);
     }
@@ -106,6 +117,7 @@ function App() {
     if (api.onAiResponse) {
       const cleanup = api.onAiResponse((response) => {
         addAiResponse(response);
+        setIsProcessing(false); // Processing completed
       });
       if (cleanup) cleanupFunctions.push(cleanup);
     }
@@ -120,6 +132,7 @@ function App() {
     if (api.onError) {
       const cleanup = api.onError((error) => {
         console.error('Error:', error);
+        setIsProcessing(false); // Processing failed
         // TODO: Show error notification
       });
       if (cleanup) cleanupFunctions.push(cleanup);
@@ -142,7 +155,7 @@ function App() {
         api.removeAllListeners();
       }
     };
-  }, []);
+  }, [currentQuestion, addCapture, updateCaptureOcr, addAiResponse, setStatus, setIsProcessing]);
 
   const handleManualCapture = () => {
     const api = window.electronAPI || mockElectronAPI;
@@ -159,40 +172,38 @@ function App() {
 
   const handleTextOnlyQuestion = (question: string) => {
     console.log('Text-only question:', question);
-    // TODO: Implement AI API call for text-only questions
-    // For now, just log the question
+    setIsProcessing(true); // Start processing
+    const api = window.electronAPI || mockElectronAPI;
+    api.sendTextOnlyQuestion(question);
   };
 
   const handleWithScreenQuestion = (question: string) => {
     console.log('With-screen question:', question);
-    // First capture the screen, then send question with the captured image
+    setIsProcessing(true); // Start processing
     const api = window.electronAPI || mockElectronAPI;
+    
+    // First capture the screen, then send question with the captured image
+    // We'll store the question and send it when capture is received
+    setCurrentQuestion(question);
     api.manualCapture();
-    // TODO: Implement AI API call with captured screen
-    // For now, just trigger manual capture and log the question
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-800 via-slate-700 to-slate-600 text-white">
-      <Header />
+    <div className="h-screen flex flex-col text-white">
+      <Header isProcessing={isProcessing} />
       
-      <div className="flex-1 flex overflow-hidden p-2 gap-2">
-        {/* Left Panel - Terminal Preview */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Panel - Transparent with only borders/text having background */}
         <div className="w-1/2 relative">
-          <div className="h-full bg-gradient-to-br from-gray-800 via-gray-700 to-gray-600 rounded-lg border-2 border-gray-500 shadow-2xl">
-            <div className="absolute inset-0 rounded-lg border border-gray-400 shadow-inner"></div>
-            <div className="relative h-full p-4 rounded-lg">
-              {currentCapture ? (
-                <TerminalPreview capture={currentCapture} />
-              ) : (
-                <CaptureGuide settings={settings} />
-              )}
+          <div className="h-full">
+            <div className="relative h-full p-4 pb-8">
+              <CaptureGuide settings={settings} />
             </div>
           </div>
         </div>
         
         {/* Right Panel - AI Assistant */}
-        <div className="w-1/2 relative">
+        <div className="w-1/2 relative p-2">
           <div className="h-full bg-gradient-to-br from-gray-800 via-gray-700 to-gray-600 rounded-lg border-2 border-gray-500 shadow-2xl">
             <div className="absolute inset-0 rounded-lg border border-gray-400 shadow-inner"></div>
             <div className="relative h-full p-4 rounded-lg">

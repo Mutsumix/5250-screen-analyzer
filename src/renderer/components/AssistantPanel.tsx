@@ -82,7 +82,7 @@ const AssistantPanel = ({ response, onTextOnlyQuestion, onWithScreenQuestion }: 
         <div className="flex-1 relative">
           <div className="absolute inset-0 bg-black rounded border-2 border-green-400 shadow-lg"></div>
           <div className="absolute inset-1 border border-green-300 rounded-sm"></div>
-          <div className="relative h-full p-4 overflow-y-auto">
+          <div className="relative h-full p-4 overflow-y-auto custom-scrollbar">
             {response ? (
               <div className="space-y-4">
                 <div className="border border-green-600 rounded p-3 bg-black">

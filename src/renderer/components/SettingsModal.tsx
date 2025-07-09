@@ -8,7 +8,6 @@ interface SettingsModalProps {
 
 const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
   const [settings, setSettings] = useState<AppSettings>({
-    captureInterval: 2000,
     ocrLanguage: 'eng+jpn',
     captureArea: {
       x: 100,
@@ -18,40 +17,51 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
     },
   });
 
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
     if (isOpen) {
+      setIsLoading(true);
       // Load current settings
-      const api = window.electronAPI;
+      const api = window.electronAPI || (window as any).mockElectronAPI;
       if (api?.getSettings) {
-        api.getSettings().then((loadedSettings) => {
-          setSettings(loadedSettings);
-        }).catch((error) => {
+        api.getSettings().then((loadedSettings: AppSettings) => {
+          console.log('Loaded settings:', loadedSettings);
+          // Ensure captureArea is present
+          const settingsWithArea = {
+            ...loadedSettings,
+            captureArea: loadedSettings.captureArea || {
+              x: 100,
+              y: 100,
+              width: 800,
+              height: 600,
+            }
+          };
+          setSettings(settingsWithArea);
+          setIsLoading(false);
+        }).catch((error: any) => {
           console.error('Failed to load settings:', error);
+          setIsLoading(false);
         });
+      } else {
+        console.log('Using default settings');
+        setIsLoading(false);
       }
     }
   }, [isOpen]);
 
   const handleSave = () => {
-    const api = window.electronAPI;
+    console.log('Saving settings:', settings);
+    const api = window.electronAPI || (window as any).mockElectronAPI;
     if (api?.updateSettings) {
       api.updateSettings(settings);
-      console.log('Settings saved:', settings);
-      onClose();
+      console.log('Settings sent to Electron:', settings);
+    } else {
+      console.log('Mock: Settings would be saved:', settings);
     }
+    onClose();
   };
 
-  const handleCaptureAreaChange = (field: keyof typeof settings.captureArea, value: number) => {
-    if (settings.captureArea) {
-      setSettings({
-        ...settings,
-        captureArea: {
-          ...settings.captureArea,
-          [field]: value,
-        },
-      });
-    }
-  };
 
   if (!isOpen) return null;
 
@@ -60,23 +70,12 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
       <div className="bg-gray-800 rounded-lg p-6 w-96 max-w-md">
         <h2 className="text-xl font-semibold mb-4 text-white">Settings</h2>
         
+        {/* Debug info */}
+        <div className="mb-4 p-2 bg-gray-700 rounded text-xs text-gray-300">
+          <div>Debug: {JSON.stringify(settings, null, 2)}</div>
+        </div>
+        
         <div className="space-y-4">
-          {/* Capture Interval */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Capture Interval (ms)
-            </label>
-            <input
-              type="number"
-              value={settings.captureInterval}
-              onChange={(e) => setSettings({ ...settings, captureInterval: parseInt(e.target.value) })}
-              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
-              min="1000"
-              max="10000"
-              step="500"
-            />
-          </div>
-
           {/* OCR Language */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">
@@ -93,52 +92,17 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
             </select>
           </div>
 
-          {/* Capture Area */}
-          {settings.captureArea && (
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Capture Area
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs text-gray-400">X Position</label>
-                  <input
-                    type="number"
-                    value={settings.captureArea.x}
-                    onChange={(e) => handleCaptureAreaChange('x', parseInt(e.target.value))}
-                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400">Y Position</label>
-                  <input
-                    type="number"
-                    value={settings.captureArea.y}
-                    onChange={(e) => handleCaptureAreaChange('y', parseInt(e.target.value))}
-                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400">Width</label>
-                  <input
-                    type="number"
-                    value={settings.captureArea.width}
-                    onChange={(e) => handleCaptureAreaChange('width', parseInt(e.target.value))}
-                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400">Height</label>
-                  <input
-                    type="number"
-                    value={settings.captureArea.height}
-                    onChange={(e) => handleCaptureAreaChange('height', parseInt(e.target.value))}
-                    className="w-full px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
-                  />
-                </div>
-              </div>
+          {/* Capture Area Note */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Capture Area
+            </label>
+            <div className="text-sm text-gray-400 bg-gray-700 p-3 rounded">
+              📍 Position your 5250 terminal window within the capture frame shown in the main application window.
+              <br />
+              The application will automatically capture the content within that frame.
             </div>
-          )}
+          </div>
         </div>
 
         {/* Buttons */}

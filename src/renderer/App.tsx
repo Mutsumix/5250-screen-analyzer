@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
-import { AppStatus, ScreenCapture, AIResponse } from '../shared/types';
+import { AppStatus, ScreenCapture, AIResponse, AppSettings } from '../shared/types';
 import { useStore } from './stores/useStore';
 import Header from './components/Header';
 import TerminalPreview from './components/TerminalPreview';
 import AssistantPanel from './components/AssistantPanel';
 import ControlBar from './components/ControlBar';
 import SettingsModal from './components/SettingsModal';
+import CaptureGuide from './components/CaptureGuide';
 
 // Mock electronAPI for development
 const mockElectronAPI = {
   getSettings: () => Promise.resolve({ 
-    captureInterval: 2000, 
     ocrLanguage: 'eng+jpn',
     captureArea: {
       x: 100,
@@ -20,8 +20,6 @@ const mockElectronAPI = {
     }
   }),
   updateSettings: (settings: any) => console.log('Update settings:', settings),
-  startCapture: () => console.log('Start capture'),
-  stopCapture: () => console.log('Stop capture'),
   manualCapture: () => console.log('Manual capture'),
   onCaptureResult: (callback: (capture: ScreenCapture) => void) => {
     console.log('Mock: onCaptureResult listener added');
@@ -44,6 +42,16 @@ const mockElectronAPI = {
     return () => console.log('Mock: onError listener removed');
   },
   removeAllListeners: () => console.log('Mock: removeAllListeners called'),
+  getWindowBounds: () => Promise.resolve({ x: 100, y: 100, width: 1200, height: 800 }),
+  updateCaptureArea: (captureArea: any) => console.log('Mock: updateCaptureArea called with:', captureArea),
+  onWindowMoved: (callback: () => void) => {
+    console.log('Mock: onWindowMoved listener added');
+    return () => console.log('Mock: onWindowMoved listener removed');
+  },
+  onWindowResized: (callback: () => void) => {
+    console.log('Mock: onWindowResized listener added');
+    return () => console.log('Mock: onWindowResized listener removed');
+  },
 };
 
 declare global {
@@ -63,8 +71,16 @@ function App() {
     currentResponse
   } = useStore();
 
-  const [isCapturing, setIsCapturing] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settings, setSettings] = useState<AppSettings>({
+    ocrLanguage: 'eng+jpn',
+    captureArea: {
+      x: 100,
+      y: 100,
+      width: 800,
+      height: 600,
+    },
+  });
 
   useEffect(() => {
     // Use mock API if electronAPI is not available
@@ -97,7 +113,6 @@ function App() {
     if (api.onStatusUpdate) {
       const cleanup = api.onStatusUpdate((newStatus) => {
         setStatus(newStatus);
-        setIsCapturing(newStatus === 'capturing');
       });
       if (cleanup) cleanupFunctions.push(cleanup);
     }
@@ -112,8 +127,9 @@ function App() {
 
     // Load initial settings
     if (api.getSettings) {
-      api.getSettings().then((settings) => {
-        console.log('Settings loaded:', settings);
+      api.getSettings().then((loadedSettings) => {
+        console.log('Settings loaded:', loadedSettings);
+        setSettings(loadedSettings);
       }).catch((error) => {
         console.error('Failed to load settings:', error);
       });
@@ -127,16 +143,6 @@ function App() {
       }
     };
   }, []);
-
-  const handleStartCapture = () => {
-    const api = window.electronAPI || mockElectronAPI;
-    api.startCapture();
-  };
-
-  const handleStopCapture = () => {
-    const api = window.electronAPI || mockElectronAPI;
-    api.stopCapture();
-  };
 
   const handleManualCapture = () => {
     const api = window.electronAPI || mockElectronAPI;
@@ -157,7 +163,11 @@ function App() {
       
       <div className="flex-1 flex overflow-hidden">
         <div className="w-1/2 p-4">
-          <TerminalPreview capture={currentCapture} />
+          {currentCapture ? (
+            <TerminalPreview capture={currentCapture} />
+          ) : (
+            <CaptureGuide settings={settings} />
+          )}
         </div>
         
         <div className="w-1/2 p-4 border-l border-gray-700">
@@ -166,10 +176,6 @@ function App() {
       </div>
       
       <ControlBar
-        status={status}
-        isCapturing={isCapturing}
-        onStart={handleStartCapture}
-        onStop={handleStopCapture}
         onManualCapture={handleManualCapture}
         onOpenSettings={handleOpenSettings}
       />

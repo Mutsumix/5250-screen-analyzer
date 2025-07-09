@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, desktopCapturer } from 'electron';
+import { app, BrowserWindow, ipcMain, desktopCapturer, systemPreferences, screen } from 'electron';
 import path from 'path';
 import Store from 'electron-store';
 import { AppSettings } from '../shared/types';
@@ -10,7 +10,6 @@ const isDev = process.env.NODE_ENV === 'development' || process.argv.includes('-
 const store = new Store<{ settings: AppSettings }>({
   defaults: {
     settings: {
-      captureInterval: 2000,
       ocrLanguage: 'eng+jpn',
       captureArea: {
         x: 100,
@@ -23,7 +22,6 @@ const store = new Store<{ settings: AppSettings }>({
 });
 
 let mainWindow: BrowserWindow | null = null;
-let captureInterval: NodeJS.Timeout | null = null;
 
 function createWindow() {
   console.log('Creating window...');
@@ -31,6 +29,8 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    minWidth: 1000,  // 最小幅：5250ターミナル用に十分なスペース
+    minHeight: 700,  // 最小高：ヘッダー、コントロールバー、ガイド枠を含む
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -38,6 +38,7 @@ function createWindow() {
     },
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     show: false, // Don't show until ready
+    frame: true, // フレームは残す（操作のため）
   });
 
   console.log('Window created, loading content...');
@@ -63,6 +64,17 @@ function createWindow() {
   mainWindow.on('closed', () => {
     console.log('Window closed');
     mainWindow = null;
+  });
+
+  // ウィンドウ移動時にキャプチャエリアを更新
+  mainWindow.on('moved', () => {
+    console.log('Window moved');
+    mainWindow?.webContents.send('window:moved');
+  });
+
+  mainWindow.on('resized', () => {
+    console.log('Window resized');
+    mainWindow?.webContents.send('window:resized');
   });
 }
 
@@ -102,45 +114,40 @@ ipcMain.handle('settings:get', () => {
 });
 
 ipcMain.on('settings:update', (_, settings: Partial<AppSettings>) => {
+  console.log('Received settings update:', settings);
   const currentSettings = store.get('settings');
+  console.log('Current settings:', currentSettings);
   const newSettings = { ...currentSettings, ...settings };
+  console.log('New settings to save:', newSettings);
   store.set('settings', newSettings);
-});
-
-ipcMain.on('capture:start', () => {
-  startCapture();
-});
-
-ipcMain.on('capture:stop', () => {
-  stopCapture();
+  console.log('Settings saved successfully');
+  
+  // Verify the settings were saved
+  const savedSettings = store.get('settings');
+  console.log('Verified saved settings:', savedSettings);
 });
 
 ipcMain.on('capture:manual', () => {
   captureScreen();
 });
 
-async function startCapture() {
-  const settings = store.get('settings');
-  if (captureInterval) {
-    clearInterval(captureInterval);
+ipcMain.handle('window:getBounds', () => {
+  if (mainWindow) {
+    return mainWindow.getBounds();
   }
+  return { x: 0, y: 0, width: 1200, height: 800 };
+});
 
-  mainWindow?.webContents.send('status:update', 'capturing');
-  
-  captureInterval = setInterval(() => {
-    captureScreen();
-  }, settings.captureInterval);
-}
+ipcMain.on('capture:updateArea', (_, captureArea) => {
+  const currentSettings = store.get('settings');
+  const newSettings = { ...currentSettings, captureArea };
+  store.set('settings', newSettings);
+  console.log('Capture area updated:', captureArea);
+});
 
-function stopCapture() {
-  if (captureInterval) {
-    clearInterval(captureInterval);
-    captureInterval = null;
-  }
-  mainWindow?.webContents.send('status:update', 'idle');
-}
 
 async function captureScreen() {
+  let wasVisible = false;
   try {
     const settings = store.get('settings');
     const captureArea = settings.captureArea;
@@ -154,11 +161,18 @@ async function captureScreen() {
 
     console.log('Capturing screen with area:', captureArea);
 
-    // Get all available screens
+    // アプリを一時的に隠してキャプチャ（アプリ自体を除外）
+    if (mainWindow && mainWindow.isVisible()) {
+      wasVisible = true;
+      mainWindow.hide();
+      await new Promise(resolve => setTimeout(resolve, 50)); // 隠す処理の完了を待つ
+    }
+
+    // Get full screen first, then crop
     const sources = await desktopCapturer.getSources({
       types: ['screen'],
       thumbnailSize: {
-        width: 1920, // Get full resolution first
+        width: 1920,
         height: 1080,
       },
     });
@@ -166,19 +180,54 @@ async function captureScreen() {
     if (sources.length > 0) {
       console.log(`Found ${sources.length} screen sources`);
       
+      // Get the full screen image
+      const fullScreenImage = sources[0].thumbnail;
+      const screenSize = fullScreenImage.getSize();
+      
+      console.log(`Full screen size: ${screenSize.width}x${screenSize.height}`);
+      console.log(`Capture area: ${captureArea.x}, ${captureArea.y}, ${captureArea.width}x${captureArea.height}`);
+      
+      // Calculate scale factor between screen resolution and thumbnail
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const actualScreenSize = primaryDisplay.size;
+      
+      console.log(`Actual screen size: ${actualScreenSize.width}x${actualScreenSize.height}`);
+      
+      const scaleX = screenSize.width / actualScreenSize.width;
+      const scaleY = screenSize.height / actualScreenSize.height;
+      
+      console.log(`Scale factors: X=${scaleX}, Y=${scaleY}`);
+      
+      // Calculate scaled crop area
+      const scaledCropArea = {
+        x: Math.max(0, Math.round(captureArea.x * scaleX)),
+        y: Math.max(0, Math.round(captureArea.y * scaleY)),
+        width: Math.min(Math.round(captureArea.width * scaleX), screenSize.width),
+        height: Math.min(Math.round(captureArea.height * scaleY), screenSize.height),
+      };
+      
+      console.log(`Scaled crop area: ${scaledCropArea.x}, ${scaledCropArea.y}, ${scaledCropArea.width}x${scaledCropArea.height}`);
+      
+      // Validate crop area
+      if (scaledCropArea.width <= 0 || scaledCropArea.height <= 0) {
+        console.error('Invalid crop area dimensions');
+        throw new Error('Invalid crop area dimensions');
+      }
+      
+      // Crop the image
+      const croppedImage = fullScreenImage.crop(scaledCropArea);
+      
       const screenCapture = {
         id: Date.now().toString(),
         timestamp: new Date(),
-        imageData: sources[0].thumbnail.toDataURL(),
+        imageData: croppedImage.toDataURL(),
       };
 
-      console.log('Screen captured successfully');
+      console.log('Screen captured and cropped successfully');
       mainWindow?.webContents.send('capture:result', screenCapture);
       
-      // Return status to idle after processing
-      setTimeout(() => {
-        mainWindow?.webContents.send('status:update', 'idle');
-      }, 500);
+      // Send status update for manual capture
+      mainWindow?.webContents.send('status:update', 'idle');
     } else {
       throw new Error('No screen sources found');
     }
@@ -189,5 +238,10 @@ async function captureScreen() {
       details: error,
     });
     mainWindow?.webContents.send('status:update', 'error');
+  } finally {
+    // アプリを再表示
+    if (mainWindow && wasVisible) {
+      mainWindow.show();
+    }
   }
 }

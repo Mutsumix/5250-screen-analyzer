@@ -7,9 +7,12 @@ const electronAPI = {
   updateSettings: (settings: Partial<AppSettings>) => ipcRenderer.send('settings:update', settings),
 
   // Capture controls
-  startCapture: () => ipcRenderer.send('capture:start'),
-  stopCapture: () => ipcRenderer.send('capture:stop'),
   manualCapture: () => ipcRenderer.send('capture:manual'),
+  
+  // Window management
+  getWindowBounds: () => ipcRenderer.invoke('window:getBounds'),
+  updateCaptureArea: (captureArea: { x: number; y: number; width: number; height: number }) => 
+    ipcRenderer.send('capture:updateArea', captureArea),
 
   // Event listeners
   onCaptureResult: (callback: (capture: ScreenCapture) => void) => {
@@ -37,6 +40,16 @@ const electronAPI = {
     ipcRenderer.on('error:occurred', handler);
     return () => ipcRenderer.removeListener('error:occurred', handler);
   },
+  onWindowMoved: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('window:moved', handler);
+    return () => ipcRenderer.removeListener('window:moved', handler);
+  },
+  onWindowResized: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('window:resized', handler);
+    return () => ipcRenderer.removeListener('window:resized', handler);
+  },
 
   // Cleanup
   removeAllListeners: () => {
@@ -45,6 +58,8 @@ const electronAPI = {
     ipcRenderer.removeAllListeners('ai:response');
     ipcRenderer.removeAllListeners('status:update');
     ipcRenderer.removeAllListeners('error:occurred');
+    ipcRenderer.removeAllListeners('window:moved');
+    ipcRenderer.removeAllListeners('window:resized');
   },
 };
 

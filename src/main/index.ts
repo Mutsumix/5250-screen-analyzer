@@ -12,6 +12,12 @@ const store = new Store<{ settings: AppSettings }>({
     settings: {
       captureInterval: 2000,
       ocrLanguage: 'eng+jpn',
+      captureArea: {
+        x: 100,
+        y: 100,
+        width: 800,
+        height: 600,
+      },
     },
   },
 });
@@ -146,28 +152,42 @@ async function captureScreen() {
       return;
     }
 
+    console.log('Capturing screen with area:', captureArea);
+
+    // Get all available screens
     const sources = await desktopCapturer.getSources({
       types: ['screen'],
       thumbnailSize: {
-        width: captureArea.width,
-        height: captureArea.height,
+        width: 1920, // Get full resolution first
+        height: 1080,
       },
     });
 
     if (sources.length > 0) {
+      console.log(`Found ${sources.length} screen sources`);
+      
       const screenCapture = {
         id: Date.now().toString(),
         timestamp: new Date(),
         imageData: sources[0].thumbnail.toDataURL(),
       };
 
+      console.log('Screen captured successfully');
       mainWindow?.webContents.send('capture:result', screenCapture);
-      mainWindow?.webContents.send('status:update', 'processing');
+      
+      // Return status to idle after processing
+      setTimeout(() => {
+        mainWindow?.webContents.send('status:update', 'idle');
+      }, 500);
+    } else {
+      throw new Error('No screen sources found');
     }
   } catch (error) {
+    console.error('Screen capture failed:', error);
     mainWindow?.webContents.send('error:occurred', {
       message: 'Failed to capture screen',
       details: error,
     });
+    mainWindow?.webContents.send('status:update', 'error');
   }
 }

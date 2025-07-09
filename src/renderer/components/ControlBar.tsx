@@ -6,9 +6,10 @@ interface ControlBarProps {
   onStart: () => void;
   onStop: () => void;
   onManualCapture: () => void;
+  onOpenSettings: () => void;
 }
 
-const ControlBar = ({ status, isCapturing, onStart, onStop, onManualCapture }: ControlBarProps) => {
+const ControlBar = ({ status, isCapturing, onStart, onStop, onManualCapture, onOpenSettings }: ControlBarProps) => {
   return (
     <div className="bg-gray-800 border-t border-gray-700 p-4 flex items-center justify-between">
       <div className="flex items-center space-x-4">
@@ -38,6 +39,7 @@ const ControlBar = ({ status, isCapturing, onStart, onStop, onManualCapture }: C
         </button>
         
         <button
+          onClick={onOpenSettings}
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md no-drag"
         >
           ⚙ Settings

@@ -5,10 +5,20 @@ import Header from './components/Header';
 import TerminalPreview from './components/TerminalPreview';
 import AssistantPanel from './components/AssistantPanel';
 import ControlBar from './components/ControlBar';
+import SettingsModal from './components/SettingsModal';
 
 // Mock electronAPI for development
 const mockElectronAPI = {
-  getSettings: () => Promise.resolve({ captureInterval: 2000, ocrLanguage: 'eng+jpn' }),
+  getSettings: () => Promise.resolve({ 
+    captureInterval: 2000, 
+    ocrLanguage: 'eng+jpn',
+    captureArea: {
+      x: 100,
+      y: 100,
+      width: 800,
+      height: 600,
+    }
+  }),
   updateSettings: (settings: any) => console.log('Update settings:', settings),
   startCapture: () => console.log('Start capture'),
   stopCapture: () => console.log('Stop capture'),
@@ -54,6 +64,7 @@ function App() {
   } = useStore();
 
   const [isCapturing, setIsCapturing] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   useEffect(() => {
     // Use mock API if electronAPI is not available
@@ -132,6 +143,14 @@ function App() {
     api.manualCapture();
   };
 
+  const handleOpenSettings = () => {
+    setIsSettingsOpen(true);
+  };
+
+  const handleCloseSettings = () => {
+    setIsSettingsOpen(false);
+  };
+
   return (
     <div className="h-screen flex flex-col bg-gray-900 text-white">
       <Header />
@@ -152,6 +171,12 @@ function App() {
         onStart={handleStartCapture}
         onStop={handleStopCapture}
         onManualCapture={handleManualCapture}
+        onOpenSettings={handleOpenSettings}
+      />
+      
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={handleCloseSettings}
       />
     </div>
   );

@@ -20,6 +20,21 @@ body {
   -webkit-app-region: no-drag;
 }
 
+/* Click-through area for transparent sections */
+.click-through {
+  pointer-events: none;
+}
+
+.click-through > * {
+  pointer-events: auto;
+}
+
+/* Transparent hole effect for capture area */
+.transparent-hole {
+  /* background: transparent !important; */
+  mix-blend-mode: multiply;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

@@ -12,7 +12,24 @@ export default defineConfig({
         entry: 'src/main/index.ts',
         vite: {
           build: {
-            outDir: 'dist/main'
+            outDir: 'dist-electron',
+            rollupOptions: {
+              external: ['electron']
+            }
+          }
+        }
+      },
+      {
+        entry: 'src/main/preload.ts',
+        onstart(args) {
+          args.reload()
+        },
+        vite: {
+          build: {
+            outDir: 'dist-electron',
+            rollupOptions: {
+              external: ['electron']
+            }
           }
         }
       }
@@ -26,8 +43,5 @@ export default defineConfig({
       '@renderer': path.resolve(__dirname, './src/renderer'),
       '@shared': path.resolve(__dirname, './src/shared')
     }
-  },
-  build: {
-    outDir: 'dist/renderer'
   }
 })

@@ -26,8 +26,9 @@ function createWindow() {
     width: 1200,
     height: 800,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
     },
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     show: false, // Don't show until ready
@@ -35,10 +36,14 @@ function createWindow() {
 
   console.log('Window created, loading content...');
 
-  // Load test file for now
-  console.log('Loading test file...');
-  mainWindow.loadFile(path.join(__dirname, '../test.html'));
-  mainWindow.webContents.openDevTools();
+  if (isDev) {
+    console.log('Loading dev server...');
+    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.webContents.openDevTools();
+  } else {
+    console.log('Loading production file...');
+    mainWindow.loadFile(path.join(__dirname, '../index.html'));
+  }
 
   mainWindow.once('ready-to-show', () => {
     console.log('Window ready to show');

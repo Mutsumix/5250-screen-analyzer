@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "electron": "electron .",
     "electron:dev": "electron . --dev",
+    "electron:minimal": "electron minimal-electron.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts,.tsx"
   },

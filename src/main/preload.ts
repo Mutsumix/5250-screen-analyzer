@@ -13,19 +13,29 @@ const electronAPI = {
 
   // Event listeners
   onCaptureResult: (callback: (capture: ScreenCapture) => void) => {
-    ipcRenderer.on('capture:result', (_, capture) => callback(capture));
+    const handler = (_: any, capture: ScreenCapture) => callback(capture);
+    ipcRenderer.on('capture:result', handler);
+    return () => ipcRenderer.removeListener('capture:result', handler);
   },
   onOcrResult: (callback: (result: { captureId: string; text: string }) => void) => {
-    ipcRenderer.on('ocr:result', (_, result) => callback(result));
+    const handler = (_: any, result: { captureId: string; text: string }) => callback(result);
+    ipcRenderer.on('ocr:result', handler);
+    return () => ipcRenderer.removeListener('ocr:result', handler);
   },
   onAiResponse: (callback: (response: AIResponse) => void) => {
-    ipcRenderer.on('ai:response', (_, response) => callback(response));
+    const handler = (_: any, response: AIResponse) => callback(response);
+    ipcRenderer.on('ai:response', handler);
+    return () => ipcRenderer.removeListener('ai:response', handler);
   },
   onStatusUpdate: (callback: (status: AppStatus) => void) => {
-    ipcRenderer.on('status:update', (_, status) => callback(status));
+    const handler = (_: any, status: AppStatus) => callback(status);
+    ipcRenderer.on('status:update', handler);
+    return () => ipcRenderer.removeListener('status:update', handler);
   },
   onError: (callback: (error: { message: string; details?: any }) => void) => {
-    ipcRenderer.on('error:occurred', (_, error) => callback(error));
+    const handler = (_: any, error: { message: string; details?: any }) => callback(error);
+    ipcRenderer.on('error:occurred', handler);
+    return () => ipcRenderer.removeListener('error:occurred', handler);
   },
 
   // Cleanup

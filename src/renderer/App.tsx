@@ -13,12 +13,27 @@ const mockElectronAPI = {
   startCapture: () => console.log('Start capture'),
   stopCapture: () => console.log('Stop capture'),
   manualCapture: () => console.log('Manual capture'),
-  onCaptureResult: (callback: (capture: ScreenCapture) => void) => {},
-  onOcrResult: (callback: (result: { captureId: string; text: string }) => void) => {},
-  onAiResponse: (callback: (response: AIResponse) => void) => {},
-  onStatusUpdate: (callback: (status: AppStatus) => void) => {},
-  onError: (callback: (error: { message: string; details?: any }) => void) => {},
-  removeAllListeners: () => {},
+  onCaptureResult: (callback: (capture: ScreenCapture) => void) => {
+    console.log('Mock: onCaptureResult listener added');
+    return () => console.log('Mock: onCaptureResult listener removed');
+  },
+  onOcrResult: (callback: (result: { captureId: string; text: string }) => void) => {
+    console.log('Mock: onOcrResult listener added');
+    return () => console.log('Mock: onOcrResult listener removed');
+  },
+  onAiResponse: (callback: (response: AIResponse) => void) => {
+    console.log('Mock: onAiResponse listener added');
+    return () => console.log('Mock: onAiResponse listener removed');
+  },
+  onStatusUpdate: (callback: (status: AppStatus) => void) => {
+    console.log('Mock: onStatusUpdate listener added');
+    return () => console.log('Mock: onStatusUpdate listener removed');
+  },
+  onError: (callback: (error: { message: string; details?: any }) => void) => {
+    console.log('Mock: onError listener added');
+    return () => console.log('Mock: onError listener removed');
+  },
+  removeAllListeners: () => console.log('Mock: removeAllListeners called'),
 };
 
 declare global {
@@ -44,36 +59,61 @@ function App() {
     // Use mock API if electronAPI is not available
     const api = window.electronAPI || mockElectronAPI;
     
-    // Set up event listeners
-    api.onCaptureResult((capture) => {
-      addCapture(capture);
-    });
+    // Set up event listeners and collect cleanup functions
+    const cleanupFunctions: (() => void)[] = [];
+    
+    if (api.onCaptureResult) {
+      const cleanup = api.onCaptureResult((capture) => {
+        addCapture(capture);
+      });
+      if (cleanup) cleanupFunctions.push(cleanup);
+    }
 
-    api.onOcrResult((result) => {
-      updateCaptureOcr(result.captureId, result.text);
-    });
+    if (api.onOcrResult) {
+      const cleanup = api.onOcrResult((result) => {
+        updateCaptureOcr(result.captureId, result.text);
+      });
+      if (cleanup) cleanupFunctions.push(cleanup);
+    }
 
-    api.onAiResponse((response) => {
-      addAiResponse(response);
-    });
+    if (api.onAiResponse) {
+      const cleanup = api.onAiResponse((response) => {
+        addAiResponse(response);
+      });
+      if (cleanup) cleanupFunctions.push(cleanup);
+    }
 
-    api.onStatusUpdate((newStatus) => {
-      setStatus(newStatus);
-      setIsCapturing(newStatus === 'capturing');
-    });
+    if (api.onStatusUpdate) {
+      const cleanup = api.onStatusUpdate((newStatus) => {
+        setStatus(newStatus);
+        setIsCapturing(newStatus === 'capturing');
+      });
+      if (cleanup) cleanupFunctions.push(cleanup);
+    }
 
-    api.onError((error) => {
-      console.error('Error:', error);
-      // TODO: Show error notification
-    });
+    if (api.onError) {
+      const cleanup = api.onError((error) => {
+        console.error('Error:', error);
+        // TODO: Show error notification
+      });
+      if (cleanup) cleanupFunctions.push(cleanup);
+    }
 
     // Load initial settings
-    api.getSettings().then((settings) => {
-      console.log('Settings loaded:', settings);
-    });
+    if (api.getSettings) {
+      api.getSettings().then((settings) => {
+        console.log('Settings loaded:', settings);
+      }).catch((error) => {
+        console.error('Failed to load settings:', error);
+      });
+    }
 
     return () => {
-      api.removeAllListeners();
+      // Clean up all listeners
+      cleanupFunctions.forEach(cleanup => cleanup());
+      if (api.removeAllListeners) {
+        api.removeAllListeners();
+      }
     };
   }, []);
 

@@ -46,8 +46,9 @@
     "vite-plugin-electron-renderer": "^0.14.5"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.17.0",
+    "@anthropic-ai/sdk": "^0.17.2",
     "axios": "^1.6.5",
+    "dotenv": "^17.1.0",
     "electron-store": "^8.1.0",
     "openai": "^4.26.0",
     "react": "^18.2.0",

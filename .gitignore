@@ -47,3 +47,6 @@ coverage/
 .temp/
 *.tmp
 thumbs.db
+
+# Development captures
+captures/

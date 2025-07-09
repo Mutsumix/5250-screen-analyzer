@@ -8,6 +8,11 @@ const electronAPI = {
 
   // Capture controls
   manualCapture: () => ipcRenderer.send('capture:manual'),
+
+  // AI processing
+  sendTextOnlyQuestion: (question: string) => ipcRenderer.send('ai:textOnlyQuestion', question),
+  sendWithScreenQuestion: (question: string, captureId: string, imageData: string) => 
+    ipcRenderer.send('ai:withScreenQuestion', { question, captureId, imageData }),
   
   // Window management
   getWindowBounds: () => ipcRenderer.invoke('window:getBounds'),

@@ -14,7 +14,6 @@ export interface AIProvider {
 export interface AppSettings {
   captureArea?: CaptureArea;
   aiProvider?: AIProvider;
-  captureInterval: number;
   ocrLanguage: string;
 }
 
@@ -44,8 +43,6 @@ export interface IpcChannels {
   'error:occurred': (error: { message: string; details?: any }) => void;
   
   // Renderer -> Main
-  'capture:start': () => void;
-  'capture:stop': () => void;
   'capture:manual': () => void;
   'settings:update': (settings: Partial<AppSettings>) => void;
   'settings:get': () => AppSettings;

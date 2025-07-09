@@ -157,21 +157,52 @@ function App() {
     setIsSettingsOpen(false);
   };
 
+  const handleTextOnlyQuestion = (question: string) => {
+    console.log('Text-only question:', question);
+    // TODO: Implement AI API call for text-only questions
+    // For now, just log the question
+  };
+
+  const handleWithScreenQuestion = (question: string) => {
+    console.log('With-screen question:', question);
+    // First capture the screen, then send question with the captured image
+    const api = window.electronAPI || mockElectronAPI;
+    api.manualCapture();
+    // TODO: Implement AI API call with captured screen
+    // For now, just trigger manual capture and log the question
+  };
+
   return (
-    <div className="h-screen flex flex-col bg-gray-900 text-white">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-800 via-slate-700 to-slate-600 text-white">
       <Header />
       
-      <div className="flex-1 flex overflow-hidden">
-        <div className="w-1/2 p-4">
-          {currentCapture ? (
-            <TerminalPreview capture={currentCapture} />
-          ) : (
-            <CaptureGuide settings={settings} />
-          )}
+      <div className="flex-1 flex overflow-hidden p-2 gap-2">
+        {/* Left Panel - Terminal Preview */}
+        <div className="w-1/2 relative">
+          <div className="h-full bg-gradient-to-br from-gray-800 via-gray-700 to-gray-600 rounded-lg border-2 border-gray-500 shadow-2xl">
+            <div className="absolute inset-0 rounded-lg border border-gray-400 shadow-inner"></div>
+            <div className="relative h-full p-4 rounded-lg">
+              {currentCapture ? (
+                <TerminalPreview capture={currentCapture} />
+              ) : (
+                <CaptureGuide settings={settings} />
+              )}
+            </div>
+          </div>
         </div>
         
-        <div className="w-1/2 p-4 border-l border-gray-700">
-          <AssistantPanel response={currentResponse} />
+        {/* Right Panel - AI Assistant */}
+        <div className="w-1/2 relative">
+          <div className="h-full bg-gradient-to-br from-gray-800 via-gray-700 to-gray-600 rounded-lg border-2 border-gray-500 shadow-2xl">
+            <div className="absolute inset-0 rounded-lg border border-gray-400 shadow-inner"></div>
+            <div className="relative h-full p-4 rounded-lg">
+              <AssistantPanel 
+                response={currentResponse} 
+                onTextOnlyQuestion={handleTextOnlyQuestion}
+                onWithScreenQuestion={handleWithScreenQuestion}
+              />
+            </div>
+          </div>
         </div>
       </div>
       

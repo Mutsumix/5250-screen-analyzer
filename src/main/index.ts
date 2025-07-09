@@ -28,8 +28,8 @@ const store = new Store<{ settings: AppSettings }>({
       captureArea: {
         x: 100,
         y: 100,
-        width: 800,
-        height: 600,
+        width: 1200,
+        height: 900,
       },
     },
   },
@@ -45,22 +45,35 @@ const anthropic = new Anthropic({
 function createWindow() {
   console.log("Creating window...");
 
-  mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    minWidth: 1000, // 最小幅：5250ターミナル用に十分なスペース
-    minHeight: 700, // 最小高：ヘッダー、コントロールバー、ガイド枠を含む
+  const windowOptions = {
+    width: 2000,
+    height: 1200,
+    minWidth: 1800, // 最小幅：1200pxキャプチャエリア + アシスタントパネル
+    minHeight: 1100, // 最小高：900pxキャプチャエリア + ヘッダー/フッター
+    resizable: false, // Windows透明化の制限により無効化
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
+      webSecurity: false, // Windows透明化のため
+      backgroundThrottling: false, // 背景での処理を維持
+      enableRemoteModule: false,
     },
-    titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
+    titleBarStyle: (process.platform === "darwin" ? "hiddenInset" : "default") as "default" | "hiddenInset",
     show: false, // Don't show until ready
-    frame: true, // フレームは残す（操作のため）
-    transparent: true, // ウィンドウを透明化
+    frame: false, // 透明化のためフレームを無効化
+    transparent: true, // 透明化を有効（5250ターミナルを背景に表示するため）
     backgroundColor: "#00000000", // 完全透明
-  });
+    ...(process.platform === "win32" && {
+      // Windows特有の設定
+      skipTaskbar: false,
+      alwaysOnTop: false,
+    }),
+  };
+
+  console.log("Window options:", windowOptions);
+
+  mainWindow = new BrowserWindow(windowOptions);
 
   console.log("Window created, loading content...");
 
@@ -72,6 +85,43 @@ function createWindow() {
     console.log("Loading production file...");
     mainWindow.loadFile(path.join(__dirname, "../index.html"));
   }
+
+  // DOM読み込み後に透明化CSSを強制適用
+  mainWindow.webContents.once('dom-ready', () => {
+    console.log('DOM ready, applying selective transparency CSS');
+    if (mainWindow) {
+      mainWindow.webContents.insertCSS(`
+        html, body, #root {
+          background: transparent !important;
+          background-color: rgba(0, 0, 0, 0) !important;
+        }
+        /* 左側キャプチャエリアを完全透明に */
+        .flex-1.flex > div:nth-child(1),
+        .w-3\\/5 {
+          background: transparent !important;
+          background-color: rgba(0, 0, 0, 0) !important;
+        }
+        /* 左側キャプチャエリア内の全要素も透明に */
+        .flex-1.flex > div:nth-child(1) *,
+        .w-3\\/5 * {
+          background: transparent !important;
+          background-color: rgba(0, 0, 0, 0) !important;
+        }
+        /* 右側アシスタントパネルを完全不透明に */
+        .flex-1.flex > div:nth-child(2),
+        .w-2\\/5 {
+          background: rgba(55, 65, 81, 1) !important;
+          background-color: rgba(55, 65, 81, 1) !important;
+          opacity: 1 !important;
+        }
+        /* アシスタントパネル内部の要素も不透明に */
+        .flex-1.flex > div:nth-child(2) *,
+        .w-2\\/5 * {
+          opacity: 1 !important;
+        }
+      `);
+    }
+  });
 
   mainWindow.once("ready-to-show", () => {
     console.log("Window ready to show");
@@ -183,7 +233,7 @@ ipcMain.handle("window:getBounds", () => {
   if (mainWindow) {
     return mainWindow.getBounds();
   }
-  return { x: 0, y: 0, width: 1200, height: 800 };
+  return { x: 0, y: 0, width: 2000, height: 1200 };
 });
 
 ipcMain.on("capture:updateArea", (_, captureArea) => {
